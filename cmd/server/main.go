@@ -9,6 +9,8 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func main() {
@@ -19,6 +21,44 @@ func main() {
 		_, _ = w.Write([]byte("OK"))
 	})
 
+	dbHost := os.Getenv("DB_HOST")
+	if dbHost == "" {
+		dbHost = "localhost"
+	}
+
+	dbPort := os.Getenv("DB_PORT")
+	if dbPort == "" {
+		dbPort = "5432"
+	}
+
+	dbUser := os.Getenv("DB_USER")
+	if dbUser == "" {
+		dbUser = "task_user"
+	}
+
+	dbPassword := os.Getenv("DB_PASSWORD")
+	if dbPassword == "" {
+		dbPassword = "task_pass"
+	}
+
+	dbName := os.Getenv("DB_NAME")
+	if dbName == "" {
+		dbName = "task_db"
+	}
+
+	connString := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
+		dbUser, dbPassword, dbHost, dbPort, dbName)
+
+	pool, err := pgxpool.New(context.Background(), connString)
+	if err != nil {
+		log.Fatal("Failed to connect to database:", err)
+	}
+	defer pool.Close()
+
+	if err := pool.Ping(context.Background()); err != nil {
+		log.Fatal("Database ping failed:", err)
+	}
+
 	srv := &http.Server{
 		Addr:         ":8080",
 		Handler:      mux,
@@ -28,7 +68,7 @@ func main() {
 	}
 
 	go func() {
-		fmt.Println("Server starting on :8080")
+		log.Println("Server starting on :8080")
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("listen error : %v", err)
 		}
