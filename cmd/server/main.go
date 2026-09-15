@@ -10,7 +10,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/ImmortaL-jsdev/task-manager/internal/repository"
 )
 
 func main() {
@@ -49,15 +49,11 @@ func main() {
 	connString := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
 		dbUser, dbPassword, dbHost, dbPort, dbName)
 
-	pool, err := pgxpool.New(context.Background(), connString)
+	store, err := repository.NewPostgresStore(connString)
 	if err != nil {
 		log.Fatal("Failed to connect to database:", err)
 	}
-	defer pool.Close()
-
-	if err := pool.Ping(context.Background()); err != nil {
-		log.Fatal("Database ping failed:", err)
-	}
+	defer store.Close()
 
 	srv := &http.Server{
 		Addr:         ":8080",
