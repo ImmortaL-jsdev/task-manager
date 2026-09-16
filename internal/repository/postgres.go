@@ -75,3 +75,29 @@ func (s *PostgresStore) GetTaskByID(ctx context.Context, id string) (models.Task
 	}
 	return task, nil
 }
+
+func (s *PostgresStore) UpdateTask(ctx context.Context, id string, task models.Task) (models.Task, error) {
+	if _, err := s.GetTaskByID(ctx, id); err != nil {
+		return models.Task{}, err
+	}
+	query := `UPDATE tasks SET title = $1, description = $2, status = $3, updated_at = NOW() WHERE id = $4 RETURNING id, title, description, status, created_at, updated_at`
+
+	var updatedTask models.Task
+	err := s.pool.QueryRow(ctx, query, task.Title, task.Description, task.Status, id).Scan(&updatedTask.ID, &updatedTask.Title, &updatedTask.Description, &updatedTask.Status, &updatedTask.CreatedAt, &updatedTask.UpdatedAt)
+	if err != nil {
+		return models.Task{}, fmt.Errorf("failed to update task: %w", err)
+	}
+	return updatedTask, nil
+}
+func (s *PostgresStore) DeleteTask(ctx context.Context, id string) error {
+	cmdTag, err := s.pool.Exec(ctx, `DELETE FROM tasks WHERE id = $1`, id)
+
+	if err != nil {
+		return fmt.Errorf("failed to delete task: %w", err)
+	}
+
+	if cmdTag.RowsAffected() == 0 {
+		return fmt.Errorf("task is not found:")
+	}
+	return nil
+}
