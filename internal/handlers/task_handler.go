@@ -87,3 +87,58 @@ func (h *TaskHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	}
 	respondWithJSON(w, http.StatusOK, task)
 }
+
+func (h *TaskHandler) Update(w http.ResponseWriter, r *http.Request) {
+	var task models.Task
+
+	vars := mux.Vars(r)
+	id := vars["id"]
+
+	if err := json.NewDecoder(r.Body).Decode(&task); err != nil {
+		respondWithError(w, http.StatusBadRequest, "invalid JSON")
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	updated, err := h.service.UpdateTask(ctx, id, task)
+
+	if err != nil {
+		var notFound *myerrors.NotFoundError
+		if errors.As(err, &notFound) {
+			respondWithError(w, http.StatusNotFound, notFound.Error())
+			return
+		}
+		var valErr *myerrors.ValidationError
+		if errors.As(err, &valErr) {
+			respondWithError(w, http.StatusBadRequest, valErr.Message)
+			return
+		}
+		respondWithError(w, http.StatusInternalServerError, "internal server error")
+		return
+	}
+	respondWithJSON(w, http.StatusOK, updated)
+}
+
+func (h *TaskHandler) Delete(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id := vars["id"]
+
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	err := h.service.DeleteTask(ctx, id)
+
+	if err != nil {
+		var notFound *myerrors.NotFoundError
+		if errors.As(err, &notFound) {
+			respondWithError(w, http.StatusNotFound, notFound.Error())
+			return
+		} else {
+			respondWithError(w, http.StatusInternalServerError, "internal server error")
+			return
+		}
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
