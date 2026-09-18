@@ -2,9 +2,12 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
+	myerrors "github.com/ImmortaL-jsdev/task-manager/internal/errors"
 	"github.com/ImmortaL-jsdev/task-manager/internal/models"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -70,10 +73,14 @@ func (s *PostgresStore) GetTaskByID(ctx context.Context, id string) (models.Task
 	query := `SELECT id, title, description, status, created_at, updated_at FROM tasks WHERE id = $1`
 
 	err := s.pool.QueryRow(ctx, query, id).Scan(&task.ID, &task.Title, &task.Description, &task.Status, &task.CreatedAt, &task.UpdatedAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return models.Task{}, &myerrors.NotFoundError{Entity: "task", ID: id}
+	}
 	if err != nil {
 		return models.Task{}, fmt.Errorf("failed to get task by id: %w", err)
 	}
 	return task, nil
+
 }
 
 func (s *PostgresStore) UpdateTask(ctx context.Context, id string, task models.Task) (models.Task, error) {
@@ -91,13 +98,12 @@ func (s *PostgresStore) UpdateTask(ctx context.Context, id string, task models.T
 }
 func (s *PostgresStore) DeleteTask(ctx context.Context, id string) error {
 	cmdTag, err := s.pool.Exec(ctx, `DELETE FROM tasks WHERE id = $1`, id)
-
 	if err != nil {
 		return fmt.Errorf("failed to delete task: %w", err)
 	}
-
 	if cmdTag.RowsAffected() == 0 {
-		return fmt.Errorf("task is not found:")
+		return &myerrors.NotFoundError{Entity: "task", ID: id}
 	}
 	return nil
+
 }

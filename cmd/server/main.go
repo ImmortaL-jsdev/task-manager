@@ -10,16 +10,14 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/ImmortaL-jsdev/task-manager/internal/handlers"
 	"github.com/ImmortaL-jsdev/task-manager/internal/repository"
+	"github.com/ImmortaL-jsdev/task-manager/internal/service"
+	"github.com/gorilla/mux"
 )
 
 func main() {
-	mux := http.NewServeMux()
-
-	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte("OK"))
-	})
+	router := mux.NewRouter()
 
 	dbHost := os.Getenv("DB_HOST")
 	if dbHost == "" {
@@ -55,9 +53,23 @@ func main() {
 	}
 	defer store.Close()
 
+	svc := service.NewTaskService(store)
+
+	handler := handlers.NewTaskHandler(svc)
+
+	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("OK"))
+	})
+
+	router.HandleFunc("/tasks", handler.GetAll).Methods("GET")
+	router.HandleFunc("/tasks", handler.Create).Methods("POST")
+	router.HandleFunc("/tasks/{id}", handler.GetByID).Methods("GET")
+	router.HandleFunc("/tasks/{id}", handler.Update).Methods("PUT")
+	router.HandleFunc("/tasks/{id}", handler.Delete).Methods("DELETE")
 	srv := &http.Server{
 		Addr:         ":8080",
-		Handler:      mux,
+		Handler:      router,
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
 		IdleTimeout:  120 * time.Second,
