@@ -107,3 +107,11 @@ func (s *PostgresStore) DeleteTask(ctx context.Context, id string) error {
 	return nil
 
 }
+
+func (s *PostgresStore) Ping(ctx context.Context) error {
+	if err := s.pool.Ping(ctx); err != nil {
+		return fmt.Errorf("db unavailable: %w", err)
+	}
+
+	return nil
+}

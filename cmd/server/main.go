@@ -58,9 +58,17 @@ func main() {
 	handler := handlers.NewTaskHandler(svc)
 
 	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		if err := store.Ping(r.Context()); err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusServiceUnavailable)
+			_, _ = w.Write([]byte(`{"status":"db unavailable"}`))
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte("OK"))
-	})
+		_, _ = w.Write([]byte(`{"status": "ok"}`))
+
+	}).Methods("GET")
 
 	router.HandleFunc("/tasks", handler.GetAll).Methods("GET")
 	router.HandleFunc("/tasks", handler.Create).Methods("POST")

@@ -11,3 +11,9 @@ clean:
 
 lint:
 	golangci-lint run ./...
+	
+docker-up:
+	docker compose up -d
+
+docker-down:
+	docker compose down
