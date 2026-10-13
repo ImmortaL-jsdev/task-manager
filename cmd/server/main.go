@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/ImmortaL-jsdev/task-manager/internal/handlers"
+	"github.com/ImmortaL-jsdev/task-manager/internal/middleware"
 	"github.com/ImmortaL-jsdev/task-manager/internal/repository"
 	"github.com/ImmortaL-jsdev/task-manager/internal/service"
 	"github.com/gorilla/mux"
@@ -18,6 +19,14 @@ import (
 
 func main() {
 	router := mux.NewRouter()
+
+	router.Methods("OPTIONS").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	router.Use(middleware.RecoveryMiddleware)
+	router.Use(middleware.LoggingMiddleware)
+	router.Use(middleware.CORSMiddleware)
 
 	dbHost := os.Getenv("DB_HOST")
 	if dbHost == "" {
