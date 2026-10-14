@@ -35,8 +35,15 @@ func (h *TaskHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 
-	tasks, err := h.service.GetAllTasks(ctx)
+	status := r.URL.Query().Get("status")
+
+	tasks, err := h.service.GetTaskByStatus(ctx, status)
 	if err != nil {
+		var valErr *myerrors.ValidationError
+		if errors.As(err, &valErr) {
+			respondWithError(w, http.StatusBadRequest, valErr.Message)
+			return
+		}
 		respondWithError(w, http.StatusInternalServerError, "internal server error")
 		return
 	}

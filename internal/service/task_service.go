@@ -11,6 +11,7 @@ import (
 type TaskRepository interface {
 	CreateTask(ctx context.Context, task models.Task) (models.Task, error)
 	GetAllTasks(ctx context.Context) ([]models.Task, error)
+	GetTaskByStatus(ctx context.Context, status string) ([]models.Task, error)
 	GetTaskByID(ctx context.Context, id string) (models.Task, error)
 	UpdateTask(ctx context.Context, id string, task models.Task) (models.Task, error)
 	DeleteTask(ctx context.Context, id string) error
@@ -48,6 +49,18 @@ func (s *TaskService) CreateTask(ctx context.Context, task models.Task) (models.
 
 func (s *TaskService) GetAllTasks(ctx context.Context) ([]models.Task, error) {
 	return s.repo.GetAllTasks(ctx)
+}
+
+func (s *TaskService) GetTaskByStatus(ctx context.Context, status string) ([]models.Task, error) {
+	if status == "" {
+		return s.repo.GetAllTasks(ctx)
+	}
+	switch status {
+	case "todo", "in_progress", "done":
+		return s.repo.GetTaskByStatus(ctx, status)
+	default:
+		return nil, &myerrors.ValidationError{Message: "invalid status"}
+	}
 }
 
 func (s *TaskService) GetTaskByID(ctx context.Context, id string) (models.Task, error) {

@@ -68,6 +68,30 @@ func (s *PostgresStore) GetAllTasks(ctx context.Context) ([]models.Task, error) 
 	return tasks, nil
 }
 
+func (s *PostgresStore) GetTaskByStatus(ctx context.Context, status string) ([]models.Task, error) {
+	rows, err := s.pool.Query(ctx,
+		`SELECT id, title, description, status, created_at, updated_at
+		 FROM tasks WHERE status = $1 ORDER BY created_at DESC `,
+		status)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query tasks by status: %w", err)
+	}
+	defer rows.Close()
+
+	var tasks []models.Task
+	for rows.Next() {
+		var task models.Task
+		if err := rows.Scan(&task.ID, &task.Title, &task.Description, &task.Status, &task.CreatedAt, &task.UpdatedAt); err != nil {
+			return nil, fmt.Errorf("failed to scan task: %w", err)
+		}
+		tasks = append(tasks, task)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows iteration error: %w", err)
+	}
+	return tasks, nil
+}
+
 func (s *PostgresStore) GetTaskByID(ctx context.Context, id string) (models.Task, error) {
 	var task models.Task
 	query := `SELECT id, title, description, status, created_at, updated_at FROM tasks WHERE id = $1`
