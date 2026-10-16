@@ -1,4 +1,4 @@
-.PHONY: run build clean lint docker-up docker-down test test-unit test-integration test-cover
+.PHONY: run build clean lint docker-up docker-down test test-unit test-integration test-cover pre-push
 
 run:
 	go run cmd/server/main.go
@@ -30,3 +30,7 @@ test-integration:
 test-cover:
 	go test ./... -coverprofile=coverage.out
 	go tool cover -func=coverage.out
+
+pre-push: lint test-unit test-integration
+	@echo ""
+	@echo "✅ All checks passed. You can safely push."
